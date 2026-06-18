@@ -1,0 +1,3 @@
+finance mapping placeholder
+revenue=B
+costs=C
