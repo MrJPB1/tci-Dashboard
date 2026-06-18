@@ -6,55 +6,24 @@
   <title>tci Controlling Dashboard</title>
   <link rel="stylesheet" href="assets/css/styles.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js" defer></script>
   <script src="assets/js/app.js" defer></script>
 </head>
 <body>
   <div class="layout">
     <aside class="sidebar">
       <div class="brand">tci</div>
-      <nav id="departmentNav">
-        <a href="#overview" class="active">Uebersicht</a>
-      </nav>
+      <nav id="departmentNav"><a href="#overview" class="active">Uebersicht</a></nav>
     </aside>
-
     <main class="content">
       <header class="header">
-        <div>
-          <p class="meta">Controlling Dashboard</p>
-          <h1 id="pageTitle">Uebersicht</h1>
-          <p>Kennzahlen, Auswertungen und historische Wochenstaende.</p>
-        </div>
-        <div class="filters">
-          <label>Periode <select id="periodSelect"></select></label>
-          <label>Abteilung <select id="departmentSelect"></select></label>
-        </div>
+        <div><p class="meta">Controlling Dashboard</p><h1 id="pageTitle">Uebersicht</h1><p>Kennzahlen, Auswertungen und historische Wochenstaende.</p></div>
+        <div class="filters"><label>Periode <select id="periodSelect"></select></label><label>Abteilung <select id="departmentSelect"></select></label></div>
       </header>
-
-      <section class="cards" id="kpiCards">
-        <article class="card"><span>Umsatz</span><strong id="kpiRevenue">-</strong><small>aktuelle Periode</small></article>
-        <article class="card"><span>Kosten</span><strong id="kpiCosts">-</strong><small>aktuelle Periode</small></article>
-        <article class="card"><span>Ergebnis</span><strong id="kpiResult">-</strong><small>aktuelle Periode</small></article>
-        <article class="card"><span>Planerfuellung</span><strong id="kpiTarget">-</strong><small>gegen Zielwert</small></article>
-      </section>
-
-      <section class="grid">
-        <article class="panel wide">
-          <div class="panel-head"><h2>Entwicklung</h2><span>Historie</span></div>
-          <canvas id="trendChart" height="120"></canvas>
-        </article>
-        <article class="panel">
-          <div class="panel-head"><h2>Abteilungen</h2><span>Status</span></div>
-          <div id="departmentCards"></div>
-        </article>
-      </section>
-
-      <section class="panel">
-        <div class="panel-head"><h2>Detailauswertung</h2><input id="tableSearch" type="search" placeholder="Filtern"></div>
-        <table id="dataTable">
-          <thead><tr><th>Kennzahl</th><th>Aktuell</th><th>Vorperiode</th><th>Status</th></tr></thead>
-          <tbody></tbody>
-        </table>
-      </section>
+      <section class="status" id="dataStatus">Konfiguration wird geladen.</section>
+      <section class="cards" id="kpiCards"><article class="card"><span>Umsatz</span><strong id="kpiRevenue">-</strong><small>aktuelle Periode</small></article><article class="card"><span>Kosten</span><strong id="kpiCosts">-</strong><small>aktuelle Periode</small></article><article class="card"><span>Ergebnis</span><strong id="kpiResult">-</strong><small>aktuelle Periode</small></article><article class="card"><span>Planerfuellung</span><strong id="kpiTarget">-</strong><small>gegen Zielwert</small></article></section>
+      <section class="grid"><article class="panel wide"><div class="panel-head"><h2>Entwicklung</h2><span>Historie</span></div><canvas id="trendChart" height="120"></canvas></article><article class="panel"><div class="panel-head"><h2>Abteilungen</h2><span>Status</span></div><div id="departmentCards"></div></article></section>
+      <section class="panel"><div class="panel-head"><h2>Detailauswertung</h2><input id="tableSearch" type="search" placeholder="Filtern"></div><table id="dataTable"><thead><tr><th>Kennzahl</th><th>Aktuell</th><th>Vorperiode</th><th>Status</th></tr></thead><tbody></tbody></table></section>
     </main>
   </div>
 </body>
