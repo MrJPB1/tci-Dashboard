@@ -1,3 +1,16 @@
-document.addEventListener('DOMContentLoaded', function() {
-  console.log('tci dashboard loaded');
-});
+const departments=[{id:'sales',name:'Vertrieb'},{id:'production',name:'Produktion'},{id:'support',name:'Support'},{id:'logistics-it',name:'Logistik und IT'},{id:'accounting',name:'Buchhaltung'},{id:'quality',name:'QM'},{id:'marketing',name:'Marketing'}];
+const periods=['2026-W25','2026-W24','2026-W23','2026-W22','2026-W21','2026-W20'];
+const base={sales:[820,760,715,690,640,610],production:[74,72,70,68,65,63],support:[92,89,87,86,84,81],['logistics-it']:[96,94,91,90,88,86],accounting:[99,98,97,96,95,94],quality:[97,96,95,93,92,91],marketing:[48,45,44,41,39,37]};
+let currentDepartment='sales';
+let chart=null;
+function euro(v){return new Intl.NumberFormat('de-DE',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(v*1000)}
+function init(){renderNavigation();renderSelects();bindEvents();renderDashboard()}
+function renderNavigation(){const nav=document.getElementById('departmentNav');departments.forEach(d=>{const a=document.createElement('a');a.href='#'+d.id;a.textContent=d.name;a.dataset.id=d.id;nav.appendChild(a)})}
+function renderSelects(){const p=document.getElementById('periodSelect');periods.forEach(x=>{const o=document.createElement('option');o.value=x;o.textContent=x;p.appendChild(o)});const s=document.getElementById('departmentSelect');departments.forEach(d=>{const o=document.createElement('option');o.value=d.id;o.textContent=d.name;s.appendChild(o)})}
+function bindEvents(){document.getElementById('departmentNav').addEventListener('click',e=>{if(e.target.dataset.id){e.preventDefault();currentDepartment=e.target.dataset.id;document.getElementById('departmentSelect').value=currentDepartment;renderDashboard()}});document.getElementById('departmentSelect').addEventListener('change',e=>{currentDepartment=e.target.value;renderDashboard()});document.getElementById('periodSelect').addEventListener('change',renderDashboard);document.getElementById('tableSearch').addEventListener('input',filterTable)}
+function renderDashboard(){const dep=departments.find(d=>d.id===currentDepartment);const values=base[currentDepartment];const active=document.getElementById('periodSelect').selectedIndex||0;const current=values[active];document.getElementById('pageTitle').textContent=dep.name;document.getElementById('kpiRevenue').textContent=euro(current);document.getElementById('kpiCosts').textContent=euro(Math.round(current*.68));document.getElementById('kpiResult').textContent=euro(Math.round(current*.32));document.getElementById('kpiTarget').textContent=Math.min(119,Math.round(90+current/30))+'%';renderCards();renderTable(current);renderChart(dep.name,values)}
+function renderCards(){const box=document.getElementById('departmentCards');box.innerHTML='';departments.forEach(d=>{const div=document.createElement('div');div.className='dept-card';div.textContent=d.name+' - aktiv';box.appendChild(div)})}
+function renderTable(v){const rows=[['Umsatz',euro(v),euro(Math.round(v*.94)),'gruen'],['Kosten',euro(Math.round(v*.68)),euro(Math.round(v*.70)),'gelb'],['Ergebnis',euro(Math.round(v*.32)),euro(Math.round(v*.24)),'gruen'],['Planerfuellung',Math.min(119,Math.round(90+v/30))+'%','96%','gruen']];document.querySelector('#dataTable tbody').innerHTML=rows.map(r=>'<tr><td>'+r[0]+'</td><td>'+r[1]+'</td><td>'+r[2]+'</td><td>'+r[3]+'</td></tr>').join('')}
+function renderChart(label,values){const ctx=document.getElementById('trendChart');if(!window.Chart||!ctx)return;if(chart)chart.destroy();chart=new Chart(ctx,{type:'line',data:{labels:periods,datasets:[{label:label,data:values,tension:.35}]},options:{responsive:true,plugins:{legend:{display:false}}}})}
+function filterTable(e){const q=e.target.value.toLowerCase();document.querySelectorAll('#dataTable tbody tr').forEach(r=>{r.style.display=r.textContent.toLowerCase().includes(q)?'':'none'})}
+document.addEventListener('DOMContentLoaded',init);
