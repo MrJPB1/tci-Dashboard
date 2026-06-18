@@ -1,0 +1,1 @@
+<excelConfig department="accounting"><sheet name="Buchhaltung"/><columns><column key="revenue" source="B"/><column key="costs" source="C"/><column key="profit" source="D"/></columns></excelConfig>
