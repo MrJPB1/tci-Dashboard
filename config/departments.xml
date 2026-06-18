@@ -1,5 +1,9 @@
 <departments>
-  <department id="finance" name="Finanzen" icon="finance" config="config/excel/finance.xml" />
-  <department id="sales" name="Vertrieb" icon="sales" config="config/excel/sales.xml" />
-  <department id="production" name="Produktion" icon="production" config="config/excel/production.xml" />
+  <department id="sales" name="Vertrieb" />
+  <department id="production" name="Produktion" />
+  <department id="support" name="Support" />
+  <department id="logistics-it" name="Logistik und IT" />
+  <department id="accounting" name="Buchhaltung" />
+  <department id="quality" name="QM" />
+  <department id="marketing" name="Marketing" />
 </departments>
