@@ -1,0 +1,1 @@
+<excelConfig department="logistics-it"><sheet name="LogistikIT"/><columns><column key="availability" source="B"/><column key="incidents" source="C"/></columns></excelConfig>
