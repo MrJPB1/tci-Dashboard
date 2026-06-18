@@ -1,0 +1,1 @@
+<excelConfig department="sales"><sheet name="Vertrieb"/><columns><column key="revenue" source="B"/><column key="margin" source="C"/></columns></excelConfig>
