@@ -1,1 +1,19 @@
-/* tci dashboard styles */
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  background: #f4f6f8;
+  color: #1f2937;
+}
+
+.header {
+  background: #0b4f8a;
+  color: white;
+  padding: 20px;
+}
+
+.card {
+  background: white;
+  border-radius: 10px;
+  padding: 20px;
+  margin: 10px;
+}
