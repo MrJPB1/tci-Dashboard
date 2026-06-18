@@ -1,0 +1,1 @@
+<excelConfig department="marketing"><sheet name="Marketing"/><columns><column key="leads" source="B"/><column key="campaigns" source="C"/></columns></excelConfig>
