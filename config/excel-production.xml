@@ -1,0 +1,1 @@
+<excelConfig department="production"><sheet name="Produktion"/><columns><column key="output" source="B"/><column key="downtime" source="C"/><column key="efficiency" source="D"/></columns><kpis><kpi key="output" cell="B2"/><kpi key="efficiency" cell="D2"/></kpis></excelConfig>
