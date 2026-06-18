@@ -1,1 +1,3 @@
-console.log('tci dashboard');
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('tci dashboard loaded');
+});
