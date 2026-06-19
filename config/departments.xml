@@ -1,9 +1,9 @@
 <departments>
-  <department id="sales" name="Vertrieb" config="config/excel-sales.xml" dataPath="data/sales/{period}/sales.xlsx" />
-  <department id="production" name="Produktion" config="config/excel-production.xml" dataPath="data/production/{period}/production.xlsx" />
-  <department id="support" name="Support" config="config/excel-support.xml" dataPath="data/support/{period}/support.xlsx" />
-  <department id="logistics-it" name="Logistik und IT" config="config/excel-logistics-it.xml" dataPath="data/logistics-it/{period}/logistics-it.xlsx" />
-  <department id="accounting" name="Buchhaltung" config="config/excel-accounting.xml" dataPath="data/accounting/{period}/accounting.xlsx" />
-  <department id="quality" name="QM" config="config/excel-qm.xml" dataPath="data/quality/{period}/quality.xlsx" />
-  <department id="marketing" name="Marketing" config="config/excel-marketing.xml" dataPath="data/marketing/{period}/marketing.xlsx" />
+  <department id="sales" name="Vertrieb" config="config/excel-sales.xml" dataPath="data/sales/{period}/sales.xls" />
+  <department id="production" name="Produktion" config="config/excel-production.xml" dataPath="data/production/{period}/production.xls" />
+  <department id="support" name="Support" config="config/excel-support.xml" dataPath="data/support/{period}/support.xls" />
+  <department id="logistics-it" name="Logistik und IT" config="config/excel-logistics-it.xml" dataPath="data/logistics-it/{period}/logistics-it.xls" />
+  <department id="accounting" name="Buchhaltung" config="config/excel-accounting.xml" dataPath="data/accounting/{period}/accounting.xls" />
+  <department id="quality" name="QM" config="config/excel-qm.xml" dataPath="data/quality/{period}/quality.xls" />
+  <department id="marketing" name="Marketing" config="config/excel-marketing.xml" dataPath="data/marketing/{period}/marketing.xls" />
 </departments>
