@@ -1,1 +1,17 @@
-<excelConfig department="sales"><sheet name="Vertrieb"/><columns><column key="revenue" source="B"/><column key="margin" source="C"/></columns></excelConfig>
+<excelConfig department="sales">
+  <sheet name="Sheet1" />
+  <range headerRow="1" startRow="2" endRow="1000" />
+  <columns>
+    <column key="customer" label="Kunde" source="A" type="text" />
+    <column key="orderDate" label="Datum" source="B" type="date" />
+    <column key="documentNumber" label="Belegnummer" source="C" type="text" />
+    <column key="aeNumber" label="AE Nummer" source="D" type="text" />
+    <column key="description" label="Bezeichnung" source="E" type="text" />
+    <column key="netValue" label="Netto Warenwert" source="F" type="currency" />
+  </columns>
+  <metrics>
+    <metric key="revenue" label="Auftragseingang Netto" sourceColumn="netValue" aggregation="sum" type="currency" />
+    <metric key="orders" label="Anzahl Auftraege" sourceColumn="documentNumber" aggregation="count" type="number" />
+    <metric key="customers" label="Kunden" sourceColumn="customer" aggregation="distinctCount" type="number" />
+  </metrics>
+</excelConfig>
