@@ -1,5 +1,5 @@
 <departments>
-  <department id="sales" name="Vertrieb" config="config/excel-sales.xml" dataPath="data/sales/{period}/sales.xls" />
+  <department id="sales" name="Vertrieb" config="config/excel-sales.xml" dataPath="data/sales/{period}/AUFListen.xlsx" />
   <department id="production" name="Produktion" config="config/excel-production.xml" dataPath="data/production/{period}/production.xls" />
   <department id="support" name="Support" config="config/excel-support.xml" dataPath="data/support/{period}/support.xls" />
   <department id="logistics-it" name="Logistik und IT" config="config/excel-logistics-it.xml" dataPath="data/logistics-it/{period}/logistics-it.xls" />
