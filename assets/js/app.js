@@ -1,30 +1,99 @@
-let departments=[];
-const fallbackDepartments=[{id:'sales',name:'Vertrieb',config:'config/excel-sales.xml',dataPath:'data/AUFListen.xlsx'},{id:'production',name:'Produktion',config:'config/excel-production.xml',dataPath:'data/production/{period}/production.xlsx'},{id:'support',name:'Support',config:'config/excel-support.xml',dataPath:'data/support/{period}/support.xlsx'},{id:'logistics-it',name:'Logistik und IT',config:'config/excel-logistics-it.xml',dataPath:'data/logistics-it/{period}/logistics-it.xlsx'},{id:'accounting',name:'Buchhaltung',config:'config/excel-accounting.xml',dataPath:'data/accounting/{period}/accounting.xlsx'},{id:'quality',name:'QM',config:'config/excel-qm.xml',dataPath:'data/quality/{period}/quality.xlsx'},{id:'marketing',name:'Marketing',config:'config/excel-marketing.xml',dataPath:'data/marketing/{period}/marketing.xlsx'}];
+import {loadDepartments,loadExcelConfig} from './modules/config-loader.js';
+import {loadMappedRows} from './modules/excel-loader.js';
+import {analyzeSalesRows} from './modules/sales-engine.js';
+import {renderLineChart} from './modules/chart-manager.js';
+import {renderSalesOrdersTable,renderGenericTable,renderTopCustomers,renderSalesSummary} from './modules/table-manager.js';
+import {renderNavigation,renderSelects,renderSalesKpis,renderFallbackKpis,setPageTitle,setStatus,bindTableSearch} from './modules/ui.js';
+
 const periods=['2026-W25','2026-W24','2026-W23','2026-W22','2026-W21','2026-W20'];
-const base={sales:[820,760,715,690,640,610],production:[74,72,70,68,65,63],support:[92,89,87,86,84,81],['logistics-it']:[96,94,91,90,88,86],accounting:[99,98,97,96,95,94],quality:[97,96,95,93,92,91],marketing:[48,45,44,41,39,37]};
-let currentDepartment='sales';let chart=null;let lastRows=[];
-const txt=id=>document.getElementById(id);
-const money=v=>new Intl.NumberFormat('de-DE',{style:'currency',currency:'EUR'}).format(Number(v||0));
-const number=v=>new Intl.NumberFormat('de-DE').format(Number(v||0));
-function parseNumber(v){if(typeof v==='number')return v;if(!v)return 0;return Number(String(v).replace(/\./g,'').replace(',','.').replace(/[^0-9.-]/g,''))||0;}
-function excelDateLabel(v){if(v instanceof Date)return v.toISOString().slice(0,10);if(typeof v==='number'){const d=new Date(Date.UTC(1899,11,30)+v*86400000);return d.toISOString().slice(0,10);}return String(v||'ohne Datum');}
-async function init(){departments=await loadDepartments();currentDepartment=location.hash.replace('#','')||departments[0].id;renderNavigation();renderSelects();bindEvents();await renderDashboard();window.addEventListener('hashchange',async()=>{const id=location.hash.replace('#','');if(departments.some(d=>d.id===id)){currentDepartment=id;txt('departmentSelect').value=id;await renderDashboard();}})}
-async function loadDepartments(){try{const res=await fetch('config/departments.xml');if(!res.ok)throw new Error('config not found');const xml=new DOMParser().parseFromString(await res.text(),'application/xml');return [...xml.querySelectorAll('department')].map(x=>({id:x.getAttribute('id'),name:x.getAttribute('name'),config:x.getAttribute('config'),dataPath:x.getAttribute('dataPath')}));}catch(e){console.warn('Fallback departments used',e);return fallbackDepartments;}}
-async function loadExcelConfig(dep){try{const res=await fetch(dep.config);if(!res.ok)throw new Error('mapping missing');const xml=new DOMParser().parseFromString(await res.text(),'application/xml');const range=xml.querySelector('range');return {sheet:xml.querySelector('sheet')?.getAttribute('name')||'',range:{start:Number(range?.getAttribute('startRow')||2),end:Number(range?.getAttribute('endRow')||1000)},columns:[...xml.querySelectorAll('column')].map(c=>({key:c.getAttribute('key'),label:c.getAttribute('label')||c.getAttribute('key'),source:c.getAttribute('source'),type:c.getAttribute('type')||'text'})),metrics:[...xml.querySelectorAll('metric')].map(m=>({key:m.getAttribute('key'),label:m.getAttribute('label')||m.getAttribute('key'),sourceColumn:m.getAttribute('sourceColumn'),aggregation:m.getAttribute('aggregation'),type:m.getAttribute('type')||'number'})),kpis:[...xml.querySelectorAll('kpi')].map(k=>({key:k.getAttribute('key'),cell:k.getAttribute('cell')}))};}catch(e){return {sheet:'',range:{start:2,end:1000},columns:[],metrics:[],kpis:[]};}}
-async function loadWorkbook(path){if(!window.XLSX)return null;try{const res=await fetch(path);if(!res.ok)throw new Error('excel missing');const data=await res.arrayBuffer();return XLSX.read(data,{type:'array',cellDates:true});}catch(e){console.warn('Excel konnte nicht geladen werden',path,e);return null;}}
-function cellValue(sheet,addr){return sheet&&sheet[addr]?sheet[addr].v:null;}
-function rowValues(sheet,columns,start,end){const out=[];for(let r=start;r<=end;r++){const row={};columns.forEach(c=>row[c.key]=cellValue(sheet,c.source+r));if(Object.values(row).some(v=>v!==null&&v!==undefined&&v!==''))out.push(row);}return out;}
-function calculateMetrics(rows,mapping){const result={};mapping.metrics.forEach(m=>{const values=rows.map(r=>r[m.sourceColumn]).filter(v=>v!==null&&v!==undefined&&v!=='');if(m.aggregation==='sum')result[m.key]=values.reduce((a,b)=>a+parseNumber(b),0);else if(m.aggregation==='count')result[m.key]=values.length;else if(m.aggregation==='distinctCount')result[m.key]=new Set(values.map(v=>String(v).trim())).size;else result[m.key]=values[0]||0;});return result;}
-function setKpiLabels(a,b,c,d){txt('kpiRevenue').previousElementSibling.textContent=a;txt('kpiCosts').previousElementSibling.textContent=b;txt('kpiResult').previousElementSibling.textContent=c;txt('kpiTarget').previousElementSibling.textContent=d;}
-function renderNavigation(){const nav=txt('departmentNav');nav.innerHTML='<a href="#'+departments[0].id+'" data-id="'+departments[0].id+'">Uebersicht</a>';departments.forEach(d=>{const a=document.createElement('a');a.href='#'+d.id;a.textContent=d.name;a.dataset.id=d.id;nav.appendChild(a)});}
-function renderSelects(){const p=txt('periodSelect');p.innerHTML='';periods.forEach(x=>{const o=document.createElement('option');o.value=x;o.textContent=x;p.appendChild(o)});const s=txt('departmentSelect');s.innerHTML='';departments.forEach(d=>{const o=document.createElement('option');o.value=d.id;o.textContent=d.name;s.appendChild(o)});s.value=currentDepartment;}
-function bindEvents(){txt('departmentNav').addEventListener('click',e=>{if(e.target.dataset.id){e.preventDefault();location.hash=e.target.dataset.id;}});txt('departmentSelect').addEventListener('change',e=>{location.hash=e.target.value;});txt('periodSelect').addEventListener('change',renderDashboard);txt('tableSearch').addEventListener('input',filterTable);}
-async function renderDashboard(){const dep=departments.find(d=>d.id===currentDepartment)||departments[0];const period=txt('periodSelect').value||periods[0];const path=dep.dataPath.replace('{period}',period);const mapping=await loadExcelConfig(dep);const workbook=await loadWorkbook(path);let values=base[dep.id]||[0,0,0,0,0,0];let current=values[txt('periodSelect').selectedIndex||0];let rows=[];let metrics={};let source='Fallbackwerte, Excel-Datei nicht gefunden: '+path;if(workbook){const sheetName=mapping.sheet&&workbook.Sheets[mapping.sheet]?mapping.sheet:workbook.SheetNames[0];const sheet=workbook.Sheets[sheetName];rows=rowValues(sheet,mapping.columns,mapping.range.start,mapping.range.end);metrics=calculateMetrics(rows,mapping);source=rows.length?'Excel geladen: '+path+' / Blatt: '+sheetName+' / Zeilen: '+rows.length:'Excel geladen, aber keine Datenzeilen erkannt: '+path+' / Blatt: '+sheetName;}
-lastRows=rows;txt('dataStatus').textContent=source;txt('pageTitle').textContent=dep.name;if(dep.id==='sales'&&rows.length){const revenue=metrics.revenue||0;const orders=metrics.orders||0;const customers=metrics.customers||0;const avg=orders?revenue/orders:0;setKpiLabels('Auftragseingang','Auftraege','Kunden','Ø Auftrag');txt('kpiRevenue').textContent=money(revenue);txt('kpiCosts').textContent=number(orders);txt('kpiResult').textContent=number(customers);txt('kpiTarget').textContent=money(avg);renderSalesTable(dep,mapping,rows,metrics);renderChart(dep.name,buildDailySeries(rows));}else{setKpiLabels('Umsatz','Kosten','Ergebnis','Planerfuellung');txt('kpiRevenue').textContent=money(current*1000);txt('kpiCosts').textContent=money(Math.round(current*.68)*1000);txt('kpiResult').textContent=money(Math.round(current*.32)*1000);txt('kpiTarget').textContent=Math.min(119,Math.round(90+current/30))+'%';renderTable(current,dep,mapping,rows);renderChart(dep.name,values);}renderCards();}
-function buildDailySeries(rows){const grouped={};rows.forEach(r=>{const d=excelDateLabel(r.orderDate);grouped[d]=(grouped[d]||0)+parseNumber(r.netValue);});return Object.keys(grouped).sort().map(k=>({label:k,value:grouped[k]}));}
-function renderCards(){const box=txt('departmentCards');box.innerHTML='';departments.forEach(d=>{const div=document.createElement('div');div.className='dept-card';div.innerHTML='<strong>'+d.name+'</strong><small>'+d.config+'</small>';box.appendChild(div);});}
-function renderSalesTable(dep,mapping,rows,metrics){const data=[['Datenpfad',dep.dataPath.replace('{period}',txt('periodSelect').value),'','Info'],['Mapping',dep.config,'','XML'],['Auftragseingang Netto',money(metrics.revenue),'','KPI'],['Anzahl Auftraege',number(metrics.orders),'','KPI'],['Kunden',number(metrics.customers),'','KPI']];rows.slice(0,30).forEach(r=>data.push([r.customer||'',money(r.netValue),r.documentNumber||'',r.description||'']));document.querySelector('#dataTable tbody').innerHTML=data.map(r=>'<tr><td>'+r[0]+'</td><td>'+r[1]+'</td><td>'+r[2]+'</td><td>'+r[3]+'</td></tr>').join('');}
-function renderTable(v,dep,mapping,rows){const period=txt('periodSelect').value;let data=[['Datenpfad',dep.dataPath.replace('{period}',period),'','Info'],['Mapping',dep.config,'','XML'],['Spalten',mapping.columns.map(c=>c.key+':'+c.source).join(', '),'','Config'],['Umsatz',money(v*1000),money(Math.round(v*.94)*1000),'gruen'],['Kosten',money(Math.round(v*.68)*1000),money(Math.round(v*.70)*1000),'gelb'],['Ergebnis',money(Math.round(v*.32)*1000),money(Math.round(v*.24)*1000),'gruen']];if(rows.length){rows.slice(0,20).forEach((r,i)=>data.push(['Excel Zeile '+(i+2),Object.entries(r).map(x=>x[0]+'='+x[1]).join(' | '),'','Excel']));}document.querySelector('#dataTable tbody').innerHTML=data.map(r=>'<tr><td>'+r[0]+'</td><td>'+r[1]+'</td><td>'+r[2]+'</td><td>'+r[3]+'</td></tr>').join('');}
-function renderChart(label,values){const ctx=txt('trendChart');if(!window.Chart||!ctx)return;if(chart)chart.destroy();const labels=Array.isArray(values)&&values[0]&&typeof values[0]==='object'?values.map(x=>x.label):periods;const data=Array.isArray(values)&&values[0]&&typeof values[0]==='object'?values.map(x=>x.value):values;chart=new Chart(ctx,{type:'line',data:{labels:labels,datasets:[{label:label,data:data,tension:.35,fill:false}]},options:{responsive:true,plugins:{legend:{display:false}}}});}
-function filterTable(e){const q=e.target.value.toLowerCase();document.querySelectorAll('#dataTable tbody tr').forEach(r=>{r.style.display=r.textContent.toLowerCase().includes(q)?'':'none'});}
+const fallbackValues={sales:[820,760,715,690,640,610],production:[74,72,70,68,65,63],support:[92,89,87,86,84,81],['logistics-it']:[96,94,91,90,88,86],accounting:[99,98,97,96,95,94],quality:[97,96,95,93,92,91],marketing:[48,45,44,41,39,37]};
+let departments=[];
+let currentDepartment='sales';
+let currentPeriod=periods[0];
+
+function departmentById(id){return departments.find(department=>department.id===id)||departments[0];}
+
+function setCurrentDepartment(id){
+  if(!departments.some(department=>department.id===id))return;
+  currentDepartment=id;
+  location.hash=id;
+  const select=document.getElementById('departmentSelect');
+  if(select)select.value=id;
+  renderDashboard();
+}
+
+function setCurrentPeriod(period){
+  currentPeriod=period;
+  renderDashboard();
+}
+
+function fallbackSeries(departmentId){
+  const values=fallbackValues[departmentId]||[0,0,0,0,0,0];
+  return values.map((value,index)=>({label:periods[index]||String(index+1),value}));
+}
+
+function clearSalesPanels(){
+  const summary=document.getElementById('salesSummary');
+  const top=document.getElementById('topCustomers');
+  if(summary)summary.innerHTML='<p class="muted">Fuer diese Abteilung noch keine Detailanalyse verfuegbar.</p>';
+  if(top)top.innerHTML='<p class="muted">Keine Kundendaten.</p>';
+}
+
+async function renderDashboard(){
+  const department=departmentById(currentDepartment);
+  if(!department)return;
+  setPageTitle(department.name);
+  const mapping=await loadExcelConfig(department);
+  const path=department.dataPath.replace('{period}',currentPeriod);
+
+  try{
+    const result=await loadMappedRows(department,mapping,currentPeriod);
+    if(department.id==='sales'&&result.rows.length){
+      const analysis=analyzeSalesRows(result.rows);
+      setStatus('Excel geladen: '+result.path+' / Blatt: '+result.sheetName+' / Zeilen: '+analysis.orders,'success');
+      renderSalesKpis(analysis);
+      renderLineChart('trendChart','Auftragseingang',analysis.byDay);
+      renderSalesOrdersTable(analysis);
+      renderTopCustomers('topCustomers',analysis);
+      renderSalesSummary('salesSummary',analysis);
+      return;
+    }
+    setStatus('Excel geladen, aber keine Datenzeilen erkannt: '+result.path,'warning');
+    clearSalesPanels();
+    renderGenericFallback(department,mapping,path);
+  }catch(error){
+    console.warn(error);
+    setStatus('Fallbackwerte: '+error.message,'warning');
+    clearSalesPanels();
+    renderGenericFallback(department,mapping,path);
+  }
+}
+
+function renderGenericFallback(department,mapping,path){
+  const values=fallbackValues[department.id]||[0,0,0,0,0,0];
+  const selectedIndex=Math.max(0,periods.indexOf(currentPeriod));
+  const value=values[selectedIndex]||values[0]||0;
+  renderFallbackKpis(value);
+  renderLineChart('trendChart',department.name,fallbackSeries(department.id));
+  renderGenericTable(department,mapping,path);
+}
+
+async function init(){
+  departments=await loadDepartments();
+  currentDepartment=location.hash.replace('#','')||departments[0]?.id||'sales';
+  renderNavigation(departments,setCurrentDepartment);
+  renderSelects(departments,periods,setCurrentDepartment,setCurrentPeriod,currentDepartment);
+  bindTableSearch();
+  await renderDashboard();
+  window.addEventListener('hashchange',()=>{
+    const id=location.hash.replace('#','');
+    if(id&&id!==currentDepartment&&departments.some(department=>department.id===id)){
+      currentDepartment=id;
+      const select=document.getElementById('departmentSelect');
+      if(select)select.value=id;
+      renderDashboard();
+    }
+  });
+}
+
 document.addEventListener('DOMContentLoaded',init);
