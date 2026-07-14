@@ -3,27 +3,29 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>tci Controlling Dashboard</title>
-  <link rel="stylesheet" href="assets/css/styles.css">
+  <meta name="dashboard-build" content="RC2.1">
+  <title>tci Controlling Dashboard RC2</title>
+  <link rel="stylesheet" href="assets/css/styles.css?v=rc2-1">
   <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js" defer></script>
-  <script type="module" src="assets/js/app.js"></script>
+  <script type="module" src="assets/js/app.js?v=rc2-1"></script>
 </head>
 <body>
   <div class="layout">
     <aside class="sidebar">
       <div class="brand">tci</div>
+      <div class="build-label">Dashboard RC2.1</div>
       <nav id="departmentNav"><a href="#sales" class="active">Vertrieb</a></nav>
     </aside>
     <main class="content">
       <header class="header">
-        <div><p class="meta">Controlling Dashboard</p><h1 id="pageTitle">Uebersicht</h1><p>Kennzahlen, Auswertungen und historische Wochenstaende.</p></div>
+        <div><p class="meta">Controlling Dashboard · RC2.1</p><h1 id="pageTitle">Uebersicht</h1><p>Kennzahlen, Auswertungen und historische Wochenstaende.</p></div>
         <div class="filters"><label>Periode <select id="periodSelect"></select></label><label>Abteilung <select id="departmentSelect"></select></label></div>
       </header>
       <section class="status" id="dataStatus">Konfiguration wird geladen.</section>
       <section class="cards" id="kpiCards"><article class="card"><span>Auftragseingang</span><strong id="kpiRevenue">-</strong><small>aktuelle Datenbasis</small></article><article class="card"><span>Auftraege</span><strong id="kpiCosts">-</strong><small>Anzahl Belege</small></article><article class="card"><span>Kunden</span><strong id="kpiResult">-</strong><small>eindeutige Kunden</small></article><article class="card"><span>Ø Auftrag</span><strong id="kpiTarget">-</strong><small>Durchschnittswert</small></article></section>
       <section class="grid"><article class="panel wide"><div class="panel-head"><h2>Auftragseingang Verlauf</h2><span>nach Datum</span></div><canvas id="trendChart" height="120"></canvas></article><article class="panel"><div class="panel-head"><h2>Vertriebsanalyse</h2><span>KPIs</span></div><div id="salesSummary" class="metric-list"></div></article></section>
-      <section class="grid"><article class="panel wide"><div class="panel-head"><h2>Detailauswertung</h2><input id="tableSearch" type="search" placeholder="Filtern"></div><table id="dataTable"><thead><tr><th>Kunde</th><th>Netto Warenwert</th><th>Datum</th><th>Beleg</th><th>AE-Nr.</th><th>Bezeichnung</th></tr></thead><tbody></tbody></table></article><article class="panel"><div class="panel-head"><h2>Top Kunden</h2><span>Netto</span></div><div id="topCustomers" class="rank-list"></div></article></section>
+      <section class="grid"><article class="panel wide"><div class="panel-head"><h2>Detailauswertung</h2><input id="tableSearch" type="search" placeholder="Filtern"></div><div class="table-wrap"><table id="dataTable"><thead><tr><th>Kunde</th><th>Netto Warenwert</th><th>Datum</th><th>Beleg</th><th>AE-Nr.</th><th>Bezeichnung</th></tr></thead><tbody></tbody></table></div></article><article class="panel"><div class="panel-head"><h2>Top Kunden</h2><span>Netto</span></div><div id="topCustomers" class="rank-list"></div></article></section>
     </main>
   </div>
 </body>
