@@ -1,76 +1,102 @@
 # tci Controlling Dashboard
 
-Ein einfaches, interaktives HTML5-Dashboard fuer Controlling-Kennzahlen und Auswertungen auf Basis von Excel-Quelldateien.
+Konfigurierbares HTML5-Dashboard fuer Controlling-Kennzahlen auf Basis von Excel-Dateien.
 
-## Ziel
+**Aktueller Stand:** `0.9.0-rc1`
 
-Das Dashboard bietet:
+## Freigegebener Funktionsumfang
 
-- eine Einstiegsseite mit Gesamtuebersicht
-- Unterseiten je Abteilung
-- woechentliche Excel-Daten als Datenquelle
-- XML-Konfiguration je Excel-Datei fuer relevante Zeilen, Spalten und Kennzahlen
-- zentrale XML-Konfiguration fuer Abteilungen
-- interaktive Auswahl aktueller und historischer Datenstaende
-- modernes, responsives Layout in einer tci-orientierten Corporate-Optik
+Die Abteilung **Vertrieb** ist die Referenzimplementierung und wurde fachlich getestet. Folgende Auswertungen bleiben unveraendert Bestandteil des Release Candidates:
 
-## Struktur
+- Auftragseingang in Summe
+- Auftragseingang im zeitlichen Verlauf
+- Detailauswertung der Auftraege
+- Vertriebsanalyse
+- Top-Kunden
+
+Weitere Abteilungen sind bereits konfiguriert, werden im RC1 aber eindeutig als **geplant** angezeigt:
+
+- Produktion
+- Support
+- Logistik und IT
+- Buchhaltung
+- QM
+- Marketing
+
+## Datenquelle Vertrieb
+
+Die produktive Vertriebsdatei liegt unter:
 
 ```text
-.
-├── index.html
-├── assets/
-│   ├── css/styles.css
-│   └── js/app.js
-├── config/
-│   ├── departments.xml
-│   └── excel/
-│       ├── finance.xml
-│       ├── sales.xml
-│       └── production.xml
-└── data/
-    ├── README.md
-    └── samples/sample-data.csv
+data/AUFListen.xlsx
 ```
 
-## Nutzung
+Erwartete Spalten:
 
-1. Repository lokal klonen oder als statische Website bereitstellen.
-2. Excel-Dateien wochenweise in `data/<abteilung>/<YYYY-WW>/` ablegen.
-3. Pro Excel-Datei eine XML-Konfiguration in `config/excel/` pflegen.
-4. Abteilungen und Dashboard-Seiten in `config/departments.xml` verwalten.
-5. `index.html` im Browser oeffnen.
+| Spalte | Inhalt | Dashboard-Feld |
+|---|---|---|
+| A | Kunde | `customer` |
+| B | Bestelldatum | `orderDate` |
+| C | Belegnummer | `documentNumber` |
+| D | AE-Nummer | `aeNumber` |
+| E | Bezeichnung | `description` |
+| F | Netto-Warenwert | `netValue` |
 
-> Hinweis: Moderne Browser blockieren lokale `fetch()`-Zugriffe teilweise bei direktem Öffnen per `file://`. Fuer Tests empfiehlt sich ein kleiner lokaler Webserver, z. B. `python -m http.server 8080`.
+Das Mapping befindet sich in `config/excel-sales.xml`.
 
-## Excel-Konfiguration
+## Konfiguration
 
-Jede Excel-Datei bekommt eine eigene XML-Datei. Darin werden Blatt, Datenbereich, Spalten und KPI-Zellen beschrieben.
+- `config/departments.xml`: Abteilungen, Status, Mapping und Datenpfad
+- `config/excel-*.xml`: Excel-Zuordnung je Abteilung
+- `data/history.json`: verfuegbare Perioden je Abteilung
 
-Beispiel:
+Neue oder noch nicht angebundene Abteilungen werden mit `status="planned"` gekennzeichnet. Nur Abteilungen mit `status="ready"` laden produktive Daten.
 
-```xml
-<excelConfig id="finance-weekly" department="finance" filePattern="data/finance/{period}/finance.xlsx">
-  <sheet name="Controlling" />
-  <range headerRow="1" startRow="2" endRow="200" />
-  <columns>
-    <column key="costCenter" label="Kostenstelle" source="A" type="text" />
-    <column key="revenue" label="Umsatz" source="B" type="currency" />
-  </columns>
-  <kpis>
-    <kpi key="revenue" label="Umsatz" cell="B2" type="currency" />
-  </kpis>
-</excelConfig>
+## Lokaler Start
+
+Die Anwendung verwendet `fetch()` und ES-Module. Sie muss deshalb ueber einen lokalen Webserver gestartet werden:
+
+```bash
+python -m http.server 8080
 ```
 
-## Abteilungskonfiguration
+Danach im Browser oeffnen:
 
-`config/departments.xml` definiert die Einstiegsseite und alle Unterseiten:
-
-```xml
-<department id="finance" name="Finanzen" icon="€" config="config/excel/finance.xml" />
+```text
+http://localhost:8080/
 ```
 
-## Status
+## Automatisierte Tests
 
-Dieses Repository enthält ein lauffaehiges Grundgeruest mit Demo-Fallbackdaten. Die konkrete Anbindung echter Excel-Dateien kann je Abteilung ueber die XML-Dateien erweitert werden.
+Voraussetzung: Node.js 20 oder neuer.
+
+```bash
+npm test
+```
+
+Der Testlauf prueft:
+
+- Berechnung der freigegebenen Vertriebs-KPIs
+- Tages-, Wochen- und Monatsgruppierung
+- Top-Kunden
+- Zahlen- und Datumsverarbeitung
+- Vollstaendigkeit der benoetigten Dateien
+- Abteilungs- und Excel-Konfiguration
+- Vorhandensein einer gueltigen Excel-Arbeitsmappe
+
+## Deployment
+
+`main` wird ueber `.github/workflows/pages.yml` nach GitHub Pages veroeffentlicht. Der Release-Branch wird vor dem Merge durch `.github/workflows/quality.yml` geprueft.
+
+## Datenschutz und Zugriff
+
+Die Excel-Datei enthaelt reale Kunden- und Auftragsdaten. Vor einem Merge oder produktiven Deployment muss sichergestellt sein, dass die veroeffentlichte Pages-Website ausschliesslich fuer berechtigte Personen erreichbar ist. Ein privates Repository allein ist kein ausreichender Nachweis fuer einen geschuetzten Pages-Zugriff.
+
+## Release-Ablauf
+
+1. Aenderungen auf `release/0.9.0-rc1` pruefen.
+2. Automatisierte Quality Checks muessen erfolgreich sein.
+3. Manuellen Abnahmetest gemaess `docs/TESTPLAN.md` durchfuehren.
+4. Zugriffsschutz der Pages-Site bestaetigen.
+5. Pull Request nach `main` freigeben.
+6. Nach erfolgreichem Pages-Deployment den RC erneut testen.
