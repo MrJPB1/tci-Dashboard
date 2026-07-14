@@ -12,15 +12,14 @@ export function setStatus(message,type='info'){
 export function setPageTitle(title){const element=byId('pageTitle');if(element)element.textContent=title;}
 
 export function setKpiLabels(labels){
-  const ids=['kpiRevenue','kpiCosts','kpiResult','kpiTarget'];
-  ids.forEach((id,index)=>{const value=byId(id);if(value&&value.previousElementSibling)value.previousElementSibling.textContent=labels[index]||'';});
+  ['kpiRevenue','kpiCosts','kpiResult','kpiTarget'].forEach((id,index)=>{
+    const value=byId(id);
+    if(value&&value.previousElementSibling)value.previousElementSibling.textContent=labels[index]||'';
+  });
 }
 
 export function setKpis(values){
-  if(byId('kpiRevenue'))byId('kpiRevenue').textContent=values[0]||'-';
-  if(byId('kpiCosts'))byId('kpiCosts').textContent=values[1]||'-';
-  if(byId('kpiResult'))byId('kpiResult').textContent=values[2]||'-';
-  if(byId('kpiTarget'))byId('kpiTarget').textContent=values[3]||'-';
+  ['kpiRevenue','kpiCosts','kpiResult','kpiTarget'].forEach((id,index)=>{const element=byId(id);if(element)element.textContent=values[index]||'-';});
 }
 
 export function renderNavigation(departments,onSelect){
@@ -30,27 +29,44 @@ export function renderNavigation(departments,onSelect){
   departments.forEach(department=>{
     const link=document.createElement('a');
     link.href='#'+department.id;
-    link.textContent=department.name;
     link.dataset.id=department.id;
+    link.dataset.status=department.status||'planned';
+    const label=document.createElement('span');
+    label.textContent=department.name;
+    const badge=document.createElement('small');
+    badge.textContent=department.status==='ready'?'bereit':'geplant';
+    link.append(label,badge);
     link.addEventListener('click',event=>{event.preventDefault();onSelect(department.id);});
     nav.appendChild(link);
   });
 }
 
-export function renderSelects(departments,periods,onDepartment,onPeriod,currentDepartment){
-  const departmentSelect=byId('departmentSelect');
-  const periodSelect=byId('periodSelect');
-  if(periodSelect){
-    periodSelect.innerHTML='';
-    periods.forEach(period=>{const option=document.createElement('option');option.value=period;option.textContent=period;periodSelect.appendChild(option);});
-    periodSelect.addEventListener('change',event=>onPeriod(event.target.value));
-  }
-  if(departmentSelect){
-    departmentSelect.innerHTML='';
-    departments.forEach(department=>{const option=document.createElement('option');option.value=department.id;option.textContent=department.name;departmentSelect.appendChild(option);});
-    departmentSelect.value=currentDepartment;
-    departmentSelect.addEventListener('change',event=>onDepartment(event.target.value));
-  }
+export function setActiveNavigation(departmentId){
+  document.querySelectorAll('#departmentNav a').forEach(link=>link.classList.toggle('active',link.dataset.id===departmentId));
+}
+
+export function renderDepartmentSelect(departments,onDepartment,currentDepartment){
+  const select=byId('departmentSelect');
+  if(!select)return;
+  select.innerHTML='';
+  departments.forEach(department=>{
+    const option=document.createElement('option');
+    option.value=department.id;
+    option.textContent=department.name+(department.status==='ready'?'':' (geplant)');
+    select.appendChild(option);
+  });
+  select.value=currentDepartment;
+  select.addEventListener('change',event=>onDepartment(event.target.value));
+}
+
+export function updatePeriodSelect(periods,onPeriod,currentPeriod){
+  const select=byId('periodSelect');
+  if(!select)return;
+  select.innerHTML='';
+  periods.forEach(period=>{const option=document.createElement('option');option.value=period;option.textContent=period;select.appendChild(option);});
+  select.value=periods.includes(currentPeriod)?currentPeriod:periods[0];
+  select.onchange=event=>onPeriod(event.target.value);
+  select.disabled=periods.length<2;
 }
 
 export function renderSalesKpis(analysis){
@@ -58,9 +74,16 @@ export function renderSalesKpis(analysis){
   setKpis([formatMoney(analysis.revenue),formatNumber(analysis.orders),formatNumber(analysis.customers),formatMoney(analysis.averageOrder)]);
 }
 
-export function renderFallbackKpis(value){
-  setKpiLabels(['Umsatz','Kosten','Ergebnis','Planerfuellung']);
-  setKpis([formatMoney(value*1000),formatMoney(Math.round(value*.68)*1000),formatMoney(Math.round(value*.32)*1000),Math.min(119,Math.round(90+value/30))+'%']);
+export function renderEmptyKpis(){
+  setKpiLabels(['Auftragseingang','Auftraege','Kunden','Ø Auftrag']);
+  setKpis(['-','-','-','-']);
+}
+
+export function clearSalesPanels(message='Noch keine Daten verfuegbar.'){
+  const summary=byId('salesSummary');
+  const top=byId('topCustomers');
+  if(summary){summary.innerHTML='';const p=document.createElement('p');p.className='muted';p.textContent=message;summary.appendChild(p);}
+  if(top){top.innerHTML='';const p=document.createElement('p');p.className='muted';p.textContent=message;top.appendChild(p);}
 }
 
 export function bindTableSearch(){
