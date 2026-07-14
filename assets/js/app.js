@@ -6,7 +6,7 @@ import {renderSalesOrdersTable,renderPlannedDepartment,renderErrorTable,renderTo
 import {renderNavigation,setActiveNavigation,renderDepartmentSelect,updatePeriodSelect,renderSalesKpis,renderEmptyKpis,clearSalesPanels,setPageTitle,setStatus,bindTableSearch} from './modules/ui.js';
 
 let departments=[];
-let history={defaultPeriod:'Aktuell',periods:['Aktuell'],departments:{sales:['Aktuell']}};
+let historyConfig={defaultPeriod:'Aktuell',periods:['Aktuell'],departments:{sales:['Aktuell']}};
 let currentDepartment='sales';
 let currentPeriod='Aktuell';
 
@@ -19,8 +19,8 @@ function setDepartmentUi(department){
   setActiveNavigation(department.id);
   const departmentSelect=document.getElementById('departmentSelect');
   if(departmentSelect)departmentSelect.value=department.id;
-  const periods=periodsForDepartment(history,department.id);
-  currentPeriod=periods.includes(currentPeriod)?currentPeriod:(history.defaultPeriod&&periods.includes(history.defaultPeriod)?history.defaultPeriod:periods[0]);
+  const periods=periodsForDepartment(historyConfig,department.id);
+  currentPeriod=periods.includes(currentPeriod)?currentPeriod:(historyConfig.defaultPeriod&&periods.includes(historyConfig.defaultPeriod)?historyConfig.defaultPeriod:periods[0]);
   updatePeriodSelect(periods,setCurrentPeriod,currentPeriod);
 }
 
@@ -87,18 +87,17 @@ async function renderDashboard(){
 }
 
 async function init(){
-  [departments,history]=await Promise.all([loadDepartments(),loadHistory()]);
+  [departments,historyConfig]=await Promise.all([loadDepartments(),loadHistory()]);
   const requestedDepartment=location.hash.replace('#','');
   const initialDepartment=departments.some(department=>department.id===requestedDepartment)?requestedDepartment:(departments.find(department=>department.status==='ready')?.id||departments[0]?.id||'sales');
   currentDepartment=initialDepartment;
-  const department=departmentById(currentDepartment);
-  const initialPeriods=periodsForDepartment(history,currentDepartment);
-  currentPeriod=history.defaultPeriod&&initialPeriods.includes(history.defaultPeriod)?history.defaultPeriod:initialPeriods[0];
+  const initialPeriods=periodsForDepartment(historyConfig,currentDepartment);
+  currentPeriod=historyConfig.defaultPeriod&&initialPeriods.includes(historyConfig.defaultPeriod)?historyConfig.defaultPeriod:initialPeriods[0];
   renderNavigation(departments,setCurrentDepartment);
   renderDepartmentSelect(departments,setCurrentDepartment,currentDepartment);
   updatePeriodSelect(initialPeriods,setCurrentPeriod,currentPeriod);
   bindTableSearch();
-  if(location.hash!=='#'+currentDepartment)history.replaceState(null,'','#'+currentDepartment);
+  if(location.hash!=='#'+currentDepartment)window.history.replaceState(null,'','#'+currentDepartment);
   await renderDashboard();
   window.addEventListener('hashchange',()=>{
     const id=location.hash.replace('#','');
