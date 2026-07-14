@@ -1,24 +1,35 @@
-import {loadDepartments,loadExcelConfig} from './modules/config-loader.js';
+import {loadDepartments,loadHistory,periodsForDepartment,loadExcelConfig} from './modules/config-loader.js';
 import {loadMappedRows} from './modules/excel-loader.js';
 import {analyzeSalesRows} from './modules/sales-engine.js';
 import {renderLineChart} from './modules/chart-manager.js';
-import {renderSalesOrdersTable,renderGenericTable,renderTopCustomers,renderSalesSummary} from './modules/table-manager.js';
-import {renderNavigation,renderSelects,renderSalesKpis,renderFallbackKpis,setPageTitle,setStatus,bindTableSearch} from './modules/ui.js';
+import {renderSalesOrdersTable,renderPlannedDepartment,renderErrorTable,renderTopCustomers,renderSalesSummary} from './modules/table-manager.js';
+import {renderNavigation,setActiveNavigation,renderDepartmentSelect,updatePeriodSelect,renderSalesKpis,renderEmptyKpis,clearSalesPanels,setPageTitle,setStatus,bindTableSearch} from './modules/ui.js';
 
-const periods=['2026-W25','2026-W24','2026-W23','2026-W22','2026-W21','2026-W20'];
-const fallbackValues={sales:[820,760,715,690,640,610],production:[74,72,70,68,65,63],support:[92,89,87,86,84,81],['logistics-it']:[96,94,91,90,88,86],accounting:[99,98,97,96,95,94],quality:[97,96,95,93,92,91],marketing:[48,45,44,41,39,37]};
 let departments=[];
+let history={defaultPeriod:'Aktuell',periods:['Aktuell'],departments:{sales:['Aktuell']}};
 let currentDepartment='sales';
-let currentPeriod=periods[0];
+let currentPeriod='Aktuell';
 
-function departmentById(id){return departments.find(department=>department.id===id)||departments[0];}
+function departmentById(id){
+  return departments.find(department=>department.id===id)||departments[0];
+}
+
+function setDepartmentUi(department){
+  setPageTitle(department.name);
+  setActiveNavigation(department.id);
+  const departmentSelect=document.getElementById('departmentSelect');
+  if(departmentSelect)departmentSelect.value=department.id;
+  const periods=periodsForDepartment(history,department.id);
+  currentPeriod=periods.includes(currentPeriod)?currentPeriod:(history.defaultPeriod&&periods.includes(history.defaultPeriod)?history.defaultPeriod:periods[0]);
+  updatePeriodSelect(periods,setCurrentPeriod,currentPeriod);
+}
 
 function setCurrentDepartment(id){
-  if(!departments.some(department=>department.id===id))return;
-  currentDepartment=id;
-  location.hash=id;
-  const select=document.getElementById('departmentSelect');
-  if(select)select.value=id;
+  const department=departmentById(id);
+  if(!department)return;
+  currentDepartment=department.id;
+  if(location.hash!=='#'+department.id)location.hash=department.id;
+  setDepartmentUi(department);
   renderDashboard();
 }
 
@@ -27,70 +38,73 @@ function setCurrentPeriod(period){
   renderDashboard();
 }
 
-function fallbackSeries(departmentId){
-  const values=fallbackValues[departmentId]||[0,0,0,0,0,0];
-  return values.map((value,index)=>({label:periods[index]||String(index+1),value}));
+function renderPlannedState(department){
+  renderEmptyKpis();
+  clearSalesPanels('Die Datenanbindung dieser Abteilung ist fuer eine spaetere Version vorgesehen.');
+  renderLineChart('trendChart',department.name,[]);
+  renderPlannedDepartment(department);
+  setStatus(department.name+' ist im Release Candidate angelegt, aber noch nicht produktiv angebunden.','info');
 }
 
-function clearSalesPanels(){
-  const summary=document.getElementById('salesSummary');
-  const top=document.getElementById('topCustomers');
-  if(summary)summary.innerHTML='<p class="muted">Fuer diese Abteilung noch keine Detailanalyse verfuegbar.</p>';
-  if(top)top.innerHTML='<p class="muted">Keine Kundendaten.</p>';
+function renderFailureState(department,error){
+  console.error('Dashboard-Datenfehler',department.id,error);
+  renderEmptyKpis();
+  clearSalesPanels('Die Daten konnten nicht verarbeitet werden. Details stehen in der Statusmeldung.');
+  renderLineChart('trendChart',department.name,[]);
+  renderErrorTable(department,error.message);
+  setStatus('Datenfehler: '+error.message,'error');
+}
+
+async function renderSalesDashboard(department){
+  const mapping=await loadExcelConfig(department);
+  const result=await loadMappedRows(department,mapping,currentPeriod);
+  if(!result.rows.length)throw new Error('Excel-Datei wurde geladen, enthaelt aber keine auswertbaren Datenzeilen.');
+  const analysis=analyzeSalesRows(result.rows);
+  if(!analysis.orders)throw new Error('Keine Vertriebsauftraege im konfigurierten Datenbereich erkannt.');
+  renderSalesKpis(analysis);
+  renderLineChart('trendChart','Auftragseingang',analysis.byDay);
+  renderSalesOrdersTable(analysis);
+  renderTopCustomers('topCustomers',analysis);
+  renderSalesSummary('salesSummary',analysis);
+  setStatus('Excel geladen: '+result.path+' · Blatt: '+result.sheetName+' · Auftraege: '+analysis.orders,'success');
 }
 
 async function renderDashboard(){
   const department=departmentById(currentDepartment);
   if(!department)return;
-  setPageTitle(department.name);
-  const mapping=await loadExcelConfig(department);
-  const path=department.dataPath.replace('{period}',currentPeriod);
-
+  setDepartmentUi(department);
+  if(department.status!=='ready'){
+    renderPlannedState(department);
+    return;
+  }
+  setStatus('Daten werden geladen …','info');
   try{
-    const result=await loadMappedRows(department,mapping,currentPeriod);
-    if(department.id==='sales'&&result.rows.length){
-      const analysis=analyzeSalesRows(result.rows);
-      setStatus('Excel geladen: '+result.path+' / Blatt: '+result.sheetName+' / Zeilen: '+analysis.orders,'success');
-      renderSalesKpis(analysis);
-      renderLineChart('trendChart','Auftragseingang',analysis.byDay);
-      renderSalesOrdersTable(analysis);
-      renderTopCustomers('topCustomers',analysis);
-      renderSalesSummary('salesSummary',analysis);
-      return;
-    }
-    setStatus('Excel geladen, aber keine Datenzeilen erkannt: '+result.path,'warning');
-    clearSalesPanels();
-    renderGenericFallback(department,mapping,path);
+    if(department.id==='sales')await renderSalesDashboard(department);
+    else renderPlannedState(department);
   }catch(error){
-    console.warn(error);
-    setStatus('Fallbackwerte: '+error.message,'warning');
-    clearSalesPanels();
-    renderGenericFallback(department,mapping,path);
+    renderFailureState(department,error instanceof Error?error:new Error(String(error)));
   }
 }
 
-function renderGenericFallback(department,mapping,path){
-  const values=fallbackValues[department.id]||[0,0,0,0,0,0];
-  const selectedIndex=Math.max(0,periods.indexOf(currentPeriod));
-  const value=values[selectedIndex]||values[0]||0;
-  renderFallbackKpis(value);
-  renderLineChart('trendChart',department.name,fallbackSeries(department.id));
-  renderGenericTable(department,mapping,path);
-}
-
 async function init(){
-  departments=await loadDepartments();
-  currentDepartment=location.hash.replace('#','')||departments[0]?.id||'sales';
+  [departments,history]=await Promise.all([loadDepartments(),loadHistory()]);
+  const requestedDepartment=location.hash.replace('#','');
+  const initialDepartment=departments.some(department=>department.id===requestedDepartment)?requestedDepartment:(departments.find(department=>department.status==='ready')?.id||departments[0]?.id||'sales');
+  currentDepartment=initialDepartment;
+  const department=departmentById(currentDepartment);
+  const initialPeriods=periodsForDepartment(history,currentDepartment);
+  currentPeriod=history.defaultPeriod&&initialPeriods.includes(history.defaultPeriod)?history.defaultPeriod:initialPeriods[0];
   renderNavigation(departments,setCurrentDepartment);
-  renderSelects(departments,periods,setCurrentDepartment,setCurrentPeriod,currentDepartment);
+  renderDepartmentSelect(departments,setCurrentDepartment,currentDepartment);
+  updatePeriodSelect(initialPeriods,setCurrentPeriod,currentPeriod);
   bindTableSearch();
+  if(location.hash!=='#'+currentDepartment)history.replaceState(null,'','#'+currentDepartment);
   await renderDashboard();
   window.addEventListener('hashchange',()=>{
     const id=location.hash.replace('#','');
     if(id&&id!==currentDepartment&&departments.some(department=>department.id===id)){
       currentDepartment=id;
-      const select=document.getElementById('departmentSelect');
-      if(select)select.value=id;
+      setDepartmentUi(departmentById(id));
       renderDashboard();
     }
   });
